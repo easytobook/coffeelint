@@ -25,24 +25,28 @@ class LineApi
     # maintain the contextual information for class-related stuff
     maintainClassContext : (line) ->
         if @context.class.inClass
-            if @lineHasToken 'INDENT'
-                @context.class.classIndents++
-            else if @lineHasToken 'OUTDENT'
-                @context.class.classIndents--
+            unless line.match( /^\s*$/ )
+                @context.class.lastUnemptyLineInClass = @lineNumber
+
+            indents = @_getLineTokensByType('INDENT').length
+            @context.class.classIndents += indents if indents
+
+            outdents = @_getLineTokensByType('OUTDENT').length
+            if outdents
+                @context.class.classIndents -= outdents
+
                 if @context.class.classIndents is 0
                     @context.class.inClass = false
                     @context.class.classIndents = null
-
-            if @context.class.inClass and not line.match( /^\s*$/ )
-                @context.class.lastUnemptyLineInClass = @lineNumber
+                    @context.class.startIndent = null
         else
             unless line.match(/\\s*/)
                 @context.class.lastUnemptyLineInClass = null
 
             if @lineHasToken 'CLASS'
                 @context.class.inClass = true
-                @context.class.lastUnemptyLineInClass = @lineNumber
                 @context.class.classIndents = 0
+                @context.class.lastUnemptyLineInClass = @lineNumber
 
         null
 
@@ -56,15 +60,19 @@ class LineApi
         unless tokenType?
             return @tokensByLine[lineNumber]?
         else
-            tokens = @tokensByLine[lineNumber]
-            return null unless tokens?
-            for token in tokens
-                return true if token[0] == tokenType
-            return false
+            tokens = @_getLineTokensByType(tokenType, lineNumber)
+            return tokens.length
 
     # Return tokens for the given line number.
     getLineTokens : () ->
         @tokensByLine[@lineNumber] || []
+
+    # Returns tokens of a particular type
+    _getLineTokensByType : (tokenType, lineNumber) ->
+        lineNumber = lineNumber ? @lineNumber
+        tokens = @getLineTokens(lineNumber)
+        filteredTokens = (token for token in tokens when token[0] is tokenType)
+        return filteredTokens
 
 
 BaseLinter = require './base_linter.coffee'

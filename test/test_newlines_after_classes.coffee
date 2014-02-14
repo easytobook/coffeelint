@@ -104,4 +104,129 @@ vows.describe('newlines_after_classes').addBatch({
             errors = coffeelint.lint(source, config)
             assert.equal(errors.length, 0)
 
+
+    'Class ending with a function and extra indent, with too little newlines' :
+
+        topic : () ->
+            """
+            class Foo
+
+                constructor: ( ) ->
+                    if foo
+                        bla()
+
+            new Foo
+            foo()
+            """
+
+        "reports error when there are not enough new lines" : (source) ->
+            config =
+                newlines_after_classes:
+                    level: 'error'
+                    value: 2
+                indentation:
+                    level: 'ignore'
+                    value: 4
+            errors = coffeelint.lint(source, config)
+            assert.equal(errors.length, 1)
+            error = errors[0]
+            msg = 'Wrong count of newlines between a class and other code'
+            assert.equal(error.message, msg)
+            assert.equal(error.rule, 'newlines_after_classes')
+            assert.equal(error.context, "Expected 2 got 1")
+
+
+    'Class ending with a function, no extra indent and too many newlines' :
+
+        topic : () ->
+            """
+            class Foo
+
+                constructor: ( ) ->
+                    bla()
+
+
+
+            new Foo
+            foo()
+            """
+
+        "reports error when there are too many newlines without extra indent" : (source) ->
+            config =
+                newlines_after_classes:
+                    level: 'error'
+                    value: 2
+                indentation:
+                    level: 'ignore'
+                    value: 4
+            errors = coffeelint.lint(source, config)
+            assert.equal(errors.length, 1)
+            error = errors[0]
+            msg = 'Wrong count of newlines between a class and other code'
+            assert.equal(error.message, msg)
+            assert.equal(error.rule, 'newlines_after_classes')
+            assert.equal(error.context, "Expected 2 got 3")
+
+
+    'Class ending with a function with no newlines' :
+
+        topic : () ->
+            """
+            class Foo
+
+                constructor: ( ) ->
+                    if foo
+                        bar()
+            new Foo
+            foo()
+            """
+
+        "report error when there are no newlines" : (source) ->
+            # Fails to produce error when a class ends with a function.
+            config =
+                newlines_after_classes:
+                    level: 'error'
+                    value: 2
+                indentation:
+                    level: 'ignore'
+                    value: 4
+            errors = coffeelint.lint(source, config)
+            assert.equal(errors.length, 1)
+            error = errors[0]
+            msg = 'Wrong count of newlines between a class and other code'
+            assert.equal(error.message, msg)
+            assert.equal(error.rule, 'newlines_after_classes')
+            assert.equal(error.context, "Expected 2 got 0")
+
+
+    'Class ending with a function, extra indent and outdent, with no newlines' :
+
+        topic : () ->
+            """
+            class Foo
+
+                constructor: ( ) ->
+                    if foo
+                        bar()
+                    foo()
+            new Foo
+            foo()
+            """
+
+        "report error when there are no newlines" : (source) ->
+            # Fails to produce error when a class ends with a function.
+            config =
+                newlines_after_classes:
+                    level: 'error'
+                    value: 2
+                indentation:
+                    level: 'ignore'
+                    value: 4
+            errors = coffeelint.lint(source, config)
+            assert.equal(errors.length, 1)
+            error = errors[0]
+            msg = 'Wrong count of newlines between a class and other code'
+            assert.equal(error.message, msg)
+            assert.equal(error.rule, 'newlines_after_classes')
+            assert.equal(error.context, "Expected 2 got 0")
 }).export(module)
