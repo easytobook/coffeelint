@@ -25,20 +25,30 @@ class LineApi
     # maintain the contextual information for class-related stuff
     maintainClassContext : (line) ->
         if @context.class.inClass
-            unless line.match( /^\s*$/ )
-                @context.class.lastUnemptyLineInClass = @lineNumber
-
             indents = @_getLineTokensByType('INDENT').length
             @context.class.classIndents += indents if indents
 
+            tokens = @getLineTokens()
             outdents = @_getLineTokensByType('OUTDENT').length
             if outdents
                 @context.class.classIndents -= outdents
 
-                if @context.class.classIndents is 0
+                if @context.class.classIndents <= 0
                     @context.class.inClass = false
                     @context.class.classIndents = null
                     @context.class.startIndent = null
+                    #justEndedClass = @lineHasToken "TERMINATOR"
+                    generatedNewLines = @_getGeneratedLeadingNewlinesCount(tokens)
+                    @context.class.lastUnemptyLineInClass += generatedNewLines
+                    justEndedClass = true
+
+            console.log line, @context.class
+            console.log "::: ", indents, " x ", outdents
+            console.log "---"
+
+            if not /^\s*$/.test(line) and not generatedNewLines
+                @context.class.lastUnemptyLineInClass = @lineNumber
+
         else
             unless line.match(/\\s*/)
                 @context.class.lastUnemptyLineInClass = null
@@ -73,6 +83,24 @@ class LineApi
         tokens = @getLineTokens(lineNumber)
         filteredTokens = (token for token in tokens when token[0] is tokenType)
         return filteredTokens
+
+    # Attempts to detect missing newlines that are collapsed due to the lexer
+    # rewriting the coffeescript before generating the token stream.
+    # see: https://github.com/jashkenas/coffee-script/issues/3137
+    _getGeneratedLeadingNewlinesCount : (tokens) ->
+        newLineCount = 0
+        for token in tokens
+            tokenName = token[0]
+            tokenValue = token[1]
+            isGenerated = token.generated is true
+            if tokenName is 'OUTDENT' or (tokenName is '}' and isGenerated)
+                console.log 'keepgoing'
+            else if tokenName is 'TERMINATOR' and tokenValue is '\n'
+                newLineCount += 1
+            else
+                return newLineCount
+
+        return newLineCount
 
 
 BaseLinter = require './base_linter.coffee'
