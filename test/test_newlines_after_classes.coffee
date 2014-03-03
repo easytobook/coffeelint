@@ -263,4 +263,33 @@ vows.describe('newlines_after_classes').addBatch({
             assert.equal(error.context, "Expected 2 got 1")
 
 
+    'Empty class' :
+
+        topic : () ->
+            """
+            if true
+                class Foo extends Bar
+
+                new Foo()
+                foobar()
+            """
+
+        "report error when there are not enough newlines" : (source) ->
+            # Fails to produce error when a class ends with a function.
+            config =
+                newlines_after_classes:
+                    level: 'error'
+                    value: 2
+                indentation:
+                    level: 'ignore'
+                    value: 4
+            errors = coffeelint.lint(source, config)
+            assert.equal(errors.length, 1)
+            error = errors[0]
+            msg = 'Wrong count of newlines between a class and other code'
+            assert.equal(error.message, msg)
+            assert.equal(error.rule, 'newlines_after_classes')
+            assert.equal(error.context, "Expected 2 got 1")
+
+
 }).export(module)
